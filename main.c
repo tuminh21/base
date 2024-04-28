@@ -665,7 +665,7 @@ static void advertising_start(void)
 
 #define SOLUTION 0
 #define TEST_OPTION 1
-#define PDM_BUFFER_BLOCK_LENGTH (400)
+#define PDM_BUFFER_BLOCK_LENGTH (200)
 #define BLE_BUFFER_SIZE (100)
 #define BUFFER_FULL (1u)
 #define BUFFER_PENDING (0u)
@@ -803,9 +803,9 @@ void pdm_handle_data()
     {
        
         l_len = BLE_BUFFER_SIZE;
-        convertPDM2Ble(ble_buffer,&queue[readIndex].buffer[0],BLE_BUFFER_SIZE);
-        ble_buffer[0]=(uint8_t)count>>8;
-        ble_buffer[1]=(uint8_t)count;
+        convertPDM2Ble(ble_buffer,&queue[readIndex].buffer[0],50);
+        //ble_buffer[0]=(uint8_t)count>>8;
+        //ble_buffer[1]=(uint8_t)count;
         queue[readIndex].status = QUEUE_EMPTY;
 
         do{
@@ -854,9 +854,9 @@ void convertPDM2Ble(uint8_t *l_dataBle, uint16_t *l_dataPdm, uint8_t l_len)
     uint8_t l_index;
     for(l_index=0;l_index<l_len;l_index++)
     {
-        //l_dataBle[l_index*2] = (uint8_t)(l_dataPdm[l_index]>>8);
-        //l_dataBle[l_index*2 + 1] = (uint8_t)(l_dataPdm[l_index]);
-        l_dataBle[l_index] = (uint8_t)(l_dataPdm[l_index*4]*255/65535);
+        l_dataBle[l_index*2] = (uint8_t)(l_dataPdm[l_index*4]>>8);
+        l_dataBle[l_index*2 + 1] = (uint8_t)(l_dataPdm[l_index*4]);
+        //l_dataBle[l_index] = (uint8_t)(l_dataPdm[l_index*4]*255/65535);
 
     }
 }
