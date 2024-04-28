@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define QUEUE_NUMBER (10)
-#define QUEUE_SIZE   (100)
+#define QUEUE_SIZE   (400)
 #define QUEUE_ERROR (0)
 #define QUEUE_OK (1)
 

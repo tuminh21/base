@@ -665,7 +665,8 @@ static void advertising_start(void)
 
 #define SOLUTION 0
 #define TEST_OPTION 1
-#define PDM_BUFFER_BLOCK_LENGTH (100)
+#define PDM_BUFFER_BLOCK_LENGTH (400)
+#define BLE_BUFFER_SIZE (100)
 #define BUFFER_FULL (1u)
 #define BUFFER_PENDING (0u)
 
@@ -735,7 +736,7 @@ void pdm_buffer_handler(nrfx_pdm_evt_t const *p_evt)
 /**@brief Application main function.
  */
 uint16_t Pdm_bufferQueue[PDM_BUFFER_BLOCK_LENGTH];
-uint8_t ble_buffer[2*PDM_BUFFER_BLOCK_LENGTH];
+uint8_t  ble_buffer[BLE_BUFFER_SIZE];
 uint16_t count = 0;
 uint32_t count1 = 0;
 
@@ -745,7 +746,7 @@ int main(void)
     /************** led init ****************/
     nrf_gpio_cfg_output(LED);
     nrf_gpio_cfg_output(LED1);
-    nrf_gpio_cfg_output(LED2);
+    //nrf_gpio_cfg_output(LED2);
     
     /******** PDM init ************/
     nrfx_err_t result = nrfx_pdm_init(&pdm_for_test, pdm_buffer_handler);
@@ -774,10 +775,11 @@ int main(void)
 
     //NRF_LOG_INFO("Hello \n");
     deltaTime = 0;
+    uint32_t err_code;
+    int l_len = 50;
     // print result
     for (;;)
     {      
-        //timeStart = app_timer_cnt_get();
         //idle_state_handle();     
         bleCheckStatus2enablePdm();       
         pdm_handle_data();
@@ -787,11 +789,6 @@ int main(void)
         }else{
           nrf_gpio_pin_write(LED1, 1);
         }
-       
-        
-        Test();
-        
-       
     }
 }
 
@@ -805,33 +802,28 @@ void pdm_handle_data()
     if(QUEUE_FULL == queue[readIndex].status)
     {
        
-        l_len = PDM_BUFFER_BLOCK_LENGTH*2;
-        convertPDM2Ble(ble_buffer,&queue[readIndex].buffer[0],PDM_BUFFER_BLOCK_LENGTH);
+        l_len = BLE_BUFFER_SIZE;
+        convertPDM2Ble(ble_buffer,&queue[readIndex].buffer[0],BLE_BUFFER_SIZE);
         ble_buffer[0]=(uint8_t)count>>8;
         ble_buffer[1]=(uint8_t)count;
         queue[readIndex].status = QUEUE_EMPTY;
-        err_code = ble_nus_data_send(&m_nus, ble_buffer, &l_len, m_conn_handle);  
+
+        do{
+          err_code = ble_nus_data_send(&m_nus, ble_buffer, &l_len, m_conn_handle);
+        } while (err_code != NRF_SUCCESS);
+
         readIndex ++;
         count++;
-        if(count == 200)
-        {
-            count = 0;
-        }
         if(readIndex >= QUEUE_NUMBER)
         {
             readIndex = 0;				
         }
-        if(err_code != NRF_SUCCESS)
+        if(count == 200)
         {
-          count1++;
-          if(count1 == 20)
-          { 
-            nrf_gpio_pin_toggle(LED2);
-            count1 = 0;
-          }
-
+            count = 0;
         }
-        //if(err_code != NRF_SUCCESS)
+          
+        //if(err_code == NRF_SUCCESS)
         //{
         //  queue[readIndex].status = QUEUE_EMPTY;
         //  readIndex ++;
@@ -845,6 +837,7 @@ void pdm_handle_data()
         //    readIndex = 0;				
         //  } 
         //}
+        //NRF_LOG_INFO("HELLO");
  
     }
     #elif(SOLUTION == 1)
@@ -861,8 +854,10 @@ void convertPDM2Ble(uint8_t *l_dataBle, uint16_t *l_dataPdm, uint8_t l_len)
     uint8_t l_index;
     for(l_index=0;l_index<l_len;l_index++)
     {
-        l_dataBle[l_index*2] = (uint8_t)(l_dataPdm[l_index]>>8);
-        l_dataBle[l_index*2 + 1] = (uint8_t)(l_dataPdm[l_index]);
+        //l_dataBle[l_index*2] = (uint8_t)(l_dataPdm[l_index]>>8);
+        //l_dataBle[l_index*2 + 1] = (uint8_t)(l_dataPdm[l_index]);
+        l_dataBle[l_index] = (uint8_t)(l_dataPdm[l_index*4]*255/65535);
+
     }
 }
 
@@ -876,10 +871,12 @@ uint8_t bleCheckStatus2enablePdm()
         if(ble_status == (uint8_t)BLE_DISCONNECTED)
         {
             (void)nrfx_pdm_stop();
+            
         }
         else if(ble_status == (uint8_t)BLE_CONNECTED)
         {
             (void)nrfx_pdm_start();
+            
         }
         else
         {
